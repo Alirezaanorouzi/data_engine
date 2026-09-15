@@ -1,13 +1,10 @@
-<<<<<<< HEAD
-# Data Engine (Dex MVP)
+# Data Engine
 
-Document infrastructure for RAG, aligned with **Scale Dex delivery**: upload → parse → chunk/embed into a **hosted vector store**, then **query live via API** at retrieval time.
+Document infrastructure for RAG: upload → parse → chunk/embed into a **hosted vector store**, then **query live via API** at retrieval time.
 
 > **Primary delivery = API**, not a flat export file. JSONL export exists only for dev/backup.
 
-## Dex-style delivery model
-
-Like [Scale Dex vector stores](https://docs.gp.scale.com/docs/capabilities/document-understanding/vector-stores):
+## Delivery model
 
 - Chunks and embeddings stay **inside the platform** (Postgres + pgvector)
 - Apps retrieve ranked chunks **at query time** via `POST .../vector-store/search`
@@ -41,7 +38,7 @@ Project (= vector store)
 | `GET` | `/api/projects/{id}/vector-store` | Store info, counts, embedding model |
 | `POST` | `/api/projects/{id}/vector-store/search` | **Primary delivery** — ranked chunks |
 
-### Search request (Dex-like)
+### Search request
 
 ```json
 {
@@ -91,6 +88,6 @@ Open [http://localhost:3000](http://localhost:3000) — the project overview sho
 
 ## Notes
 
-- One project = one vector store (MVP simplification; Dex supports multiple stores per project)
+- One project = one vector store (MVP simplification)
 - Uploads live under `storage/`; exports under `storage/exports/`
 - Parse worker: `PARSE_WORKER_URL=http://localhost:8090`
