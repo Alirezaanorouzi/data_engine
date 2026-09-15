@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Data Engine (Dex MVP)
 
 Document infrastructure for RAG, aligned with **Scale Dex delivery**: upload → parse → chunk/embed into a **hosted vector store**, then **query live via API** at retrieval time.
