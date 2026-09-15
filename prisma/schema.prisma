@@ -1,0 +1,196 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum ProjectType {
+  DOCUMENT
+}
+
+enum FileStatus {
+  UPLOADED
+  PARSING
+  PARSED
+  FAILED
+  REVIEWED
+  INDEXED
+}
+
+enum ParseStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum ChunkStatus {
+  ACTIVE
+  EXCLUDED
+}
+
+enum JobType {
+  PARSE
+  CHUNK_EMBED
+  EXPORT
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum ExportFormat {
+  RAG_JSONL
+}
+
+model Project {
+  id          String      @id @default(cuid())
+  name        String
+  type        ProjectType @default(DOCUMENT)
+  description String      @default("")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  files   SourceFile[]
+  jobs    Job[]
+  exports Export[]
+  aiCache AiCache[]
+}
+
+/// Managed uploaded document (Scale-style File). Named SourceFile to avoid DOM File clash.
+model SourceFile {
+  id          String     @id @default(cuid())
+  projectId   String
+  filename    String
+  mimeType    String     @default("application/pdf")
+  size        Int
+  storagePath String
+  contentHash String
+  pageCount   Int?
+  status      FileStatus @default(UPLOADED)
+  error       String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parseResults ParseResult[]
+  chunks       Chunk[]
+  jobs         Job[]
+
+  @@unique([projectId, contentHash])
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
+  @@map("File")
+}
+
+model ParseResult {
+  id            String      @id @default(cuid())
+  fileId        String
+  parserVersion String      @default("pymupdf-v1")
+  language      String?
+  markdown      String      @default("") @db.Text
+  structured    Json        @default("{}")
+  status        ParseStatus @default(PENDING)
+  error         String?     @db.Text
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  file   SourceFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  chunks Chunk[]
+
+  @@index([fileId, status])
+}
+
+model Chunk {
+  id            String      @id @default(cuid())
+  fileId        String
+  parseResultId String
+  ordinal       Int
+  text          String      @db.Text
+  pageNumber    Int?
+  blockTypes    Json        @default("[]")
+  metadata      Json        @default("{}")
+  status        ChunkStatus @default(ACTIVE)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  file        SourceFile  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  parseResult ParseResult @relation(fields: [parseResultId], references: [id], onDelete: Cascade)
+  embedding   Embedding?
+
+  @@unique([parseResultId, ordinal])
+  @@index([fileId, status])
+  @@index([fileId, ordinal])
+}
+
+model Embedding {
+  id        String                       @id @default(cuid())
+  chunkId   String                       @unique
+  /// Stored via raw SQL as vector(1536); Prisma cannot map the type natively.
+  vector    Unsupported("vector(1536)")?
+  model     String
+  createdAt DateTime                     @default(now())
+
+  chunk Chunk @relation(fields: [chunkId], references: [id], onDelete: Cascade)
+}
+
+model Job {
+  id         String    @id @default(cuid())
+  projectId  String
+  fileId     String?
+  type       JobType
+  status     JobStatus @default(PENDING)
+  progress   Int       @default(0)
+  total      Int       @default(0)
+  result     Json?
+  error      String?   @db.Text
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  project Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  file    SourceFile? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+  @@index([projectId, type])
+  @@index([fileId])
+}
+
+model Export {
+  id        String       @id @default(cuid())
+  projectId String
+  format    ExportFormat
+  options   Json         @default("{}")
+  itemCount Int
+  filePath  String
+  createdAt DateTime     @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+/// Cache OpenAI results by content hash so re-runs are free.
+model AiCache {
+  id          String   @id @default(cuid())
+  projectId   String?
+  contentHash String
+  kind        String
+  model       String
+  value       Json
+  createdAt   DateTime @default(now())
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([contentHash, kind, model])
+  @@index([projectId])
+}
