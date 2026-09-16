@@ -9,6 +9,7 @@ type StageKey =
   | "parse"
   | "chunk"
   | "embed"
+  | "qc"
   | "vector-store"
   | "jobs"
   | "export";
@@ -20,7 +21,7 @@ type FileOption = {
 };
 
 /** Stages scoped to the selected document (not mixed across files). */
-const FILE_SCOPED: StageKey[] = ["parse", "chunk", "embed", "jobs"];
+const FILE_SCOPED: StageKey[] = ["parse", "chunk", "embed", "qc", "jobs"];
 
 const STAGES: { key: StageKey; label: string }[] = [
   { key: "overview", label: fa.pipelineStages.overview },
@@ -28,6 +29,7 @@ const STAGES: { key: StageKey; label: string }[] = [
   { key: "parse", label: fa.pipelineStages.parse },
   { key: "chunk", label: fa.pipelineStages.chunk },
   { key: "embed", label: fa.pipelineStages.embed },
+  { key: "qc", label: fa.pipelineStages.qc },
   { key: "vector-store", label: fa.pipelineStages.vectorStore },
   { key: "jobs", label: fa.pipelineStages.jobs },
   { key: "export", label: fa.pipelineStages.export },

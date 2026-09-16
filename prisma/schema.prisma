@@ -18,6 +18,7 @@ enum FileStatus {
   PARSING
   PARSED
   FAILED
+  NEEDS_REVIEW
   REVIEWED
   INDEXED
 }
@@ -36,6 +37,7 @@ enum ChunkStatus {
 enum JobType {
   PARSE
   CHUNK_EMBED
+  QC
   EXPORT
 }
 
@@ -84,11 +86,28 @@ model SourceFile {
   parseResults ParseResult[]
   chunks       Chunk[]
   jobs         Job[]
+  qcReports    QcReport[]
 
   @@unique([projectId, contentHash])
   @@index([projectId, status])
   @@index([projectId, createdAt])
   @@map("File")
+}
+
+/// Deterministic quality report after chunk/embed (Phase A QC gate).
+model QcReport {
+  id        String   @id @default(cuid())
+  fileId    String
+  jobId     String?
+  score     Float
+  verdict   String
+  checks    Json     @default("[]")
+  summary   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  file SourceFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@index([fileId, createdAt])
 }
 
 model ParseResult {

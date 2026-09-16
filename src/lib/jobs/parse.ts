@@ -29,7 +29,7 @@ export async function runParseJob(jobId: string, projectId: string, fileId: stri
     const parseResult = await prisma.parseResult.create({
       data: {
         fileId,
-        parserVersion: parsed.parser_version || "pymupdf-v1",
+        parserVersion: parsed.parser_version || "pymupdf+qwen-v1",
         language: parsed.language || null,
         markdown: parsed.markdown,
         structured,
@@ -62,6 +62,8 @@ export async function runParseJob(jobId: string, projectId: string, fileId: stri
           pageCount: parsed.page_count ?? parsed.pages.length,
           language: parsed.language ?? null,
           parserVersion: parseResult.parserVersion,
+          ocrPageCount: parsed.ocr_pages?.length ?? 0,
+          ocrModel: parsed.ocr_model ?? null,
           blockCount,
           tableCount: parsed.tables?.length ?? 0,
         },

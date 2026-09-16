@@ -11,7 +11,10 @@ export async function getProjectVectorStore(
 
   const [indexedFiles, activeChunks, embeddings] = await Promise.all([
     prisma.sourceFile.count({
-      where: { projectId, status: { in: ["INDEXED", "REVIEWED"] } },
+      where: {
+        projectId,
+        status: { in: ["INDEXED", "NEEDS_REVIEW", "REVIEWED"] },
+      },
     }),
     prisma.chunk.count({
       where: { file: { projectId }, status: "ACTIVE" },

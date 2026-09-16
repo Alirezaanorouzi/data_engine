@@ -56,22 +56,21 @@ export async function runChunkEmbedJob(
   }
 
   if (created.length === 0) {
-    await prisma.sourceFile.update({
-      where: { id: fileId },
-      data: { status: "INDEXED" },
-    });
-    return wrapJobResult(
-      projectId,
-      "CHUNK_EMBED",
-      { chunkCount: 0, embedded: 0, parseResultId: parseResult.id },
-      {
-        fileId,
-        artifacts: {
-          chunk: pipelineUrl(projectId, "chunk", { fileId }),
-          embed: pipelineUrl(projectId, "embed", { fileId }),
+    return {
+      ...wrapJobResult(
+        projectId,
+        "CHUNK_EMBED",
+        { chunkCount: 0, embedded: 0, parseResultId: parseResult.id },
+        {
+          fileId,
+          artifacts: {
+            chunk: pipelineUrl(projectId, "chunk", { fileId }),
+            embed: pipelineUrl(projectId, "embed", { fileId }),
+          },
         },
-      },
-    );
+      ),
+      autoQc: true as const,
+    };
   }
 
   const texts = created.map((c) => c.text);
@@ -90,26 +89,24 @@ export async function runChunkEmbedJob(
     await updateJobProgress(jobId, i + 1, created.length);
   }
 
-  await prisma.sourceFile.update({
-    where: { id: fileId },
-    data: { status: "INDEXED" },
-  });
-
-  return wrapJobResult(
-    projectId,
-    "CHUNK_EMBED",
-    {
-      chunkCount: created.length,
-      embedded,
-      parseResultId: parseResult.id,
-      chunkIds: created.slice(0, 5).map((c) => c.id),
-    },
-    {
-      fileId,
-      artifacts: {
-        chunk: pipelineUrl(projectId, "chunk", { fileId }),
-        embed: pipelineUrl(projectId, "embed", { fileId }),
+  return {
+    ...wrapJobResult(
+      projectId,
+      "CHUNK_EMBED",
+      {
+        chunkCount: created.length,
+        embedded,
+        parseResultId: parseResult.id,
+        chunkIds: created.slice(0, 5).map((c) => c.id),
       },
-    },
-  );
+      {
+        fileId,
+        artifacts: {
+          chunk: pipelineUrl(projectId, "chunk", { fileId }),
+          embed: pipelineUrl(projectId, "embed", { fileId }),
+        },
+      },
+    ),
+    autoQc: true as const,
+  };
 }

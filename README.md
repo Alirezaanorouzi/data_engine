@@ -91,3 +91,41 @@ Open [http://localhost:3000](http://localhost:3000) — the project overview sho
 - One project = one vector store (MVP simplification)
 - Uploads live under `storage/`; exports under `storage/exports/`
 - Parse worker: `PARSE_WORKER_URL=http://localhost:8090`
+
+## Vercel deployment
+
+**Live URL:** [https://dataengine-one.vercel.app](https://dataengine-one.vercel.app)
+
+The Next.js app is deployed on Vercel, but **you still need cloud services** for a working production stack:
+
+| Service | Local | Production |
+|---------|-------|------------|
+| Postgres + pgvector | Docker `db` | [Neon](https://neon.tech) or Supabase with pgvector |
+| Parse worker | Docker `parse-worker` | [Railway](https://railway.app) / Render (deploy `worker/`) |
+| PDF storage | `./storage` | Set `STORAGE_ROOT=/tmp/storage` (ephemeral) or add S3/Blob later |
+| Embeddings | `.env` | Vercel → Settings → Environment Variables |
+
+### Required Vercel env vars
+
+```env
+DATABASE_URL=postgresql://...   # cloud Postgres with pgvector extension
+OPENAI_API_KEY=...
+OPENAI_BASE_URL=...
+OPENAI_EMBEDDING_MODEL=...
+PARSE_WORKER_URL=https://your-worker.railway.app
+STORAGE_ROOT=/tmp/storage
+```
+
+After setting env vars, redeploy:
+
+```bash
+vercel --prod
+```
+
+Run migrations once against the cloud DB:
+
+```bash
+DATABASE_URL="..." npx prisma migrate deploy
+```
+
+> Do **not** rely on `localhost` in production. Set all secrets in the Vercel dashboard — never commit `.env`.

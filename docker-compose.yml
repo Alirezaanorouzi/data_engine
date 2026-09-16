@@ -21,8 +21,14 @@ services:
     restart: unless-stopped
     ports:
       - "8090:8090"
+    env_file:
+      - .env
     environment:
       PORT: "8090"
+      OCR_ENABLED: "true"
+      OCR_MODEL: "qwen/qwen3.7-flash"
+      OCR_MIN_TEXT_CHARS: "30"
+      OCR_RENDER_SCALE: "2.0"
     volumes:
       - ./storage:/storage:ro
 

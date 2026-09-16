@@ -37,11 +37,13 @@ export async function POST(
   }
 
   if (
-    (body.type === JobType.PARSE || body.type === JobType.CHUNK_EMBED) &&
+    (body.type === JobType.PARSE ||
+      body.type === JobType.CHUNK_EMBED ||
+      body.type === JobType.QC) &&
     !body.fileId
   ) {
     return NextResponse.json(
-      { error: "fileId required for PARSE and CHUNK_EMBED" },
+      { error: "fileId required for PARSE, CHUNK_EMBED, and QC" },
       { status: 400 },
     );
   }

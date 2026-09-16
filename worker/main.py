@@ -1,90 +1,23 @@
 from __future__ import annotations
 
 import os
-from typing import Any
 
-import fitz
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="PDF Parse Worker (PyMuPDF)", version="1.0.0")
+from parsers import OCR_ENABLED, OCR_MODEL, PARSER_VERSION, parse_pdf_bytes
 
-
-def _blocks_from_page(page: fitz.Page) -> list[dict[str, Any]]:
-    blocks: list[dict[str, Any]] = []
-    data = page.get_text("dict")
-
-    for block in data.get("blocks", []):
-        if block.get("type") != 0:
-            continue
-        lines: list[str] = []
-        max_size = 0.0
-        for line in block.get("lines", []):
-            for span in line.get("spans", []):
-                text = (span.get("text") or "").strip()
-                if text:
-                    lines.append(text)
-                    max_size = max(max_size, float(span.get("size") or 0))
-        text = " ".join(lines).strip()
-        if not text:
-            continue
-        btype = "heading" if max_size >= 14 else "paragraph"
-        blocks.append(
-            {
-                "type": btype,
-                "text": text,
-                "bbox": block.get("bbox"),
-            }
-        )
-
-    if blocks:
-        return blocks
-
-    text = page.get_text("text").strip()
-    if not text:
-        return []
-    return [
-        {"type": "paragraph", "text": part.strip(), "bbox": None}
-        for part in text.split("\n\n")
-        if part.strip()
-    ]
-
-
-def parse_pdf_bytes(data: bytes, filename: str = "document.pdf") -> dict[str, Any]:
-    del filename
-    doc = fitz.open(stream=data, filetype="pdf")
-    pages: list[dict[str, Any]] = []
-    markdown_parts: list[str] = []
-
-    try:
-        for idx in range(doc.page_count):
-            page = doc[idx]
-            page_number = idx + 1
-            blocks = _blocks_from_page(page)
-            pages.append({"page_number": page_number, "blocks": blocks})
-            page_text = page.get_text("text").strip()
-            if page_text:
-                markdown_parts.append(f"## Page {page_number}\n\n{page_text}")
-    finally:
-        doc.close()
-
-    markdown = "\n\n".join(markdown_parts)
-    sample = markdown[:2000]
-    language = "fa" if any("\u0600" <= ch <= "\u06FF" for ch in sample) else None
-
-    return {
-        "markdown": markdown,
-        "pages": pages,
-        "tables": [],
-        "page_count": len(pages),
-        "language": language,
-        "parser_version": "pymupdf-v1",
-    }
+app = FastAPI(title="PDF Parse Worker (PyMuPDF + Qwen OCR)", version="2.1.0")
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "parser": "pymupdf-v1"}
+    return {
+        "status": "ok",
+        "parser": PARSER_VERSION,
+        "ocr": "qwen" if OCR_ENABLED else "disabled",
+        "ocr_model": OCR_MODEL,
+    }
 
 
 @app.post("/parse")

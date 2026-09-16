@@ -6,6 +6,7 @@ export type PipelineStage =
   | "parse"
   | "chunk"
   | "embed"
+  | "qc"
   | "vector-store"
   | "jobs"
   | "export";
@@ -47,7 +48,9 @@ export function wrapJobResult(
       ? "parse"
       : stage === "CHUNK_EMBED"
         ? "chunk"
-        : "export";
+        : stage === "QC"
+          ? "qc"
+          : "export";
 
   return {
     stage,

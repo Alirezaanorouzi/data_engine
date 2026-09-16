@@ -17,6 +17,7 @@ export async function GET(
       include: {
         parseResults: { orderBy: { createdAt: "desc" }, take: 1 },
         chunks: { orderBy: { ordinal: "asc" } },
+        qcReports: { orderBy: { createdAt: "desc" }, take: 1 },
       },
     });
     if (!file) {
@@ -29,12 +30,23 @@ export async function GET(
     where: { projectId },
     orderBy: { createdAt: "desc" },
     include: {
-      _count: { select: { chunks: true, parseResults: true } },
+      _count: { select: { chunks: true, parseResults: true, qcReports: true } },
       parseResults: {
         where: { status: "COMPLETED" },
         orderBy: { createdAt: "desc" },
         take: 1,
         select: { id: true, language: true, parserVersion: true, createdAt: true },
+      },
+      qcReports: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: {
+          id: true,
+          score: true,
+          verdict: true,
+          summary: true,
+          createdAt: true,
+        },
       },
     },
   });

@@ -10,6 +10,7 @@ export type ParseBlock = {
 export type ParsePage = {
   page_number: number;
   blocks: ParseBlock[];
+  ocr?: boolean;
 };
 
 export type ParseResponse = {
@@ -19,6 +20,8 @@ export type ParseResponse = {
   page_count: number;
   language?: string | null;
   parser_version?: string;
+  ocr_pages?: number[];
+  ocr_model?: string | null;
 };
 
 export function parseWorkerUrl() {
@@ -74,6 +77,8 @@ export async function parsePdfWithWorker(
     tables: Array.isArray(data.tables) ? data.tables : [],
     page_count: data.page_count || data.pages?.length || 0,
     language: data.language ?? null,
-    parser_version: data.parser_version || "pymupdf-v1",
+    parser_version: data.parser_version || "pymupdf+qwen-v1",
+    ocr_pages: Array.isArray(data.ocr_pages) ? data.ocr_pages : [],
+    ocr_model: data.ocr_model ?? null,
   };
 }

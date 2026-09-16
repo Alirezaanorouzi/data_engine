@@ -95,23 +95,36 @@ export function SearchPanel({ projectId }: { projectId: string }) {
       <ul className="space-y-3">
         {results.map((r) => (
           <li
-            key={r.chunk_id}
+            key={r.chunk_id || `${r.file_id}-${r.score}`}
             className="rounded-xl border border-zinc-200 bg-white p-4"
           >
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-              <span className="font-medium text-zinc-700">{r.filename}</span>
+            <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="rounded bg-zinc-900 px-1.5 py-0.5 font-medium text-white">
+                {fa.search.citation}
+              </span>
+              <span className="font-medium text-zinc-800">{r.filename}</span>
               {r.page != null && (
-                <span>
+                <span className="text-zinc-500">
                   {fa.search.page} {r.page}
                 </span>
               )}
-              <span dir="ltr">
+              <span dir="ltr" className="text-zinc-500">
                 {fa.search.score} {r.score.toFixed(3)}
               </span>
             </div>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-zinc-800">
               {r.content}
             </p>
+            <div
+              dir="ltr"
+              className="mt-3 flex flex-wrap gap-2 border-t border-zinc-100 pt-2 font-mono text-[10px] text-zinc-400"
+            >
+              <span title={fa.search.fileId}>file_id={r.file_id}</span>
+              {r.parse_result_id && (
+                <span>parse_result_id={r.parse_result_id}</span>
+              )}
+              {r.chunk_id && <span>chunk_id={r.chunk_id}</span>}
+            </div>
           </li>
         ))}
       </ul>

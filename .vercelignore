@@ -1,0 +1,7 @@
+storage/
+worker/.venv/
+scripts/
+terminals/
+.env
+.env.*
+!.env.example

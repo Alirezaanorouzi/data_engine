@@ -1,13 +1,13 @@
 export const fa = {
   appName: "موتور داده",
-  tagline: "PDF ← پارس ← ایندکس برداری ← بازیابی زنده از API",
+  tagline: "فایل‌های مستقل ← vector store یکپارچه ← یک API جستجو با citation",
 
   nav: {
     overview: "نمای کلی",
     upload: "بارگذاری",
     files: "فایل‌ها",
     review: "بازبینی",
-    search: "API اسناد",
+    search: "آزمایش RAG",
     export: "خروجی (اختیاری)",
   },
 
@@ -21,13 +21,18 @@ export const fa = {
 
   project: {
     documentSubtitle:
-      "زیرساخت سند برای RAG — چانک‌ها در vector store می‌مانند و در زمان پرس‌وجو از API بازیابی می‌شوند",
+      "هر فایل جداگانه پردازش می‌شود؛ همه در یک vector store یکپارچه ایندکس می‌شوند. مشتری با یک API جستجو، نتیجهٔ دقیق با citation می‌گیرد.",
     upload: "بارگذاری",
+    addFile: "افزودن فایل",
     openFiles: "فایل‌ها",
-    openSearch: "API اسناد",
+    openSearch: "آزمایش RAG",
+    filesTitle: "اسناد پروژه",
+    filesHint:
+      "پردازش مستقل هر سند — ذخیره و تعبیه در محیط یکپارچه با متادیتای غنی",
+    pipelineDetail: "جزئیات فنی",
     stats: {
       files: "فایل‌ها",
-      indexed: "ایندکس‌شده",
+      indexed: "آماده بازیابی",
       chunks: "چانک‌ها",
       embeddings: "بردارها",
     },
@@ -36,8 +41,9 @@ export const fa = {
     parsed: "پارس‌شده",
     failed: "ناموفق",
     reviewed: "بازبینی‌شده",
+    needsReview: "نیاز به بازبینی",
     excludedChunks: "چانک حذف‌شده",
-    inspectPipeline: "بازرسی JSON پایپ‌لاین",
+    inspectPipeline: "بازرسی پایپ‌لاین",
   },
 
   pipelineStages: {
@@ -46,6 +52,7 @@ export const fa = {
     parse: "پارس",
     chunk: "چانک",
     embed: "تعبیه",
+    qc: "کنترل کیفیت",
     vectorStore: "vector store",
     jobs: "کارها",
     export: "خروجی",
@@ -68,6 +75,7 @@ export const fa = {
     PARSING: "در حال پارس",
     PARSED: "پارس‌شده",
     FAILED: "خطا",
+    NEEDS_REVIEW: "نیاز به بازبینی",
     REVIEWED: "بازبینی‌شده",
     INDEXED: "ایندکس‌شده",
   } as Record<string, string>,
@@ -75,6 +83,7 @@ export const fa = {
   jobType: {
     PARSE: "پارس",
     CHUNK_EMBED: "چانک و تعبیه",
+    QC: "کنترل کیفیت",
     EXPORT: "خروجی",
   } as Record<string, string>,
 
@@ -118,8 +127,8 @@ export const fa = {
 
   files: {
     title: "فایل‌ها",
-    desc: "وضعیت پارس و ایندکس هر فایل.",
-    empty: "هنوز فایلی بارگذاری نشده.",
+    desc: "هر فایل پایپ‌لاین خودش را دارد؛ همه در یک store برای RAG مشترک‌اند.",
+    empty: "هنوز فایلی بارگذاری نشده. با «افزودن فایل» شروع کنید.",
     pages: "صفحه",
     chunks: "چانک",
     openReview: "بازبینی",
@@ -147,6 +156,11 @@ export const fa = {
     rechunk: "بازسازی چانک‌ها",
     parsePreview: "پیش‌نمایش پارس",
     chunks: "چانک‌ها",
+    qcReport: "گزارش کنترل کیفیت",
+    qcScore: "امتیاز",
+    qcVerdict: "نتیجه",
+    qcCoverage: "پوشش",
+    qcNoReport: "هنوز گزارش QC ساخته نشده.",
     saving: "در حال ذخیره…",
     saved: "ذخیره شد",
     delete: "حذف فایل",
@@ -154,27 +168,30 @@ export const fa = {
   },
 
   delivery: {
-    title: "تحویل از طریق API",
-    desc: "مثل Scale Dex — داده در vector store پلتفرم می‌ماند و در زمان پرس‌وجو از API برمی‌گردد (نه فایل نهایی).",
+    title: "API بازیابی (قلب محصول)",
+    desc: "همهٔ اسناد پروژه در یک vector store — یک endpoint برای مشتری. نتایج ranked با file_id، صفحه و citation.",
     storeInfo: "اطلاعات vector store",
-    search: "جستجوی معنایی (تحویل اصلی)",
+    search: "جستجوی معنایی با citation",
     chunks: "چانک فعال",
     embeddings: "بردار",
-    indexedFiles: "فایل ایندکس‌شده",
+    indexedFiles: "فایل آماده",
     copyUrl: "کپی URL",
+    trySearch: "آزمایش در UI",
     exportNote:
-      "خروجی JSONL فقط برای توسعه/پشتیبان است؛ مسیر اصلی تحویل همان API بازیابی است.",
+      "خروجی JSONL فقط برای توسعه است؛ تحویل production همان API جستجو است.",
   },
 
   search: {
-    title: "API اسناد",
-    desc: "همان endpoint تحویل Dex-style — POST به vector-store/search؛ چانک‌های ranked با score، file_id و parse_result_id.",
+    title: "آزمایش RAG",
+    desc: "همان API که به مشتری می‌دهید — نتایج با citation: فایل، صفحه، score و شناسه‌ها.",
     placeholder: "مثلاً شرایط فسخ قرارداد چیست؟",
     run: "جستجو",
     searching: "در حال جستجو…",
     empty: "هنوز نتیجه‌ای نیست.",
     score: "امتیاز",
     page: "صفحه",
+    citation: "استناد",
+    fileId: "file_id",
     noEmbeddings: "ابتدا فایل بارگذاری و ایندکس کنید.",
   },
 

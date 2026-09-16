@@ -8,6 +8,7 @@ const STAGES: PipelineStage[] = [
   "parse",
   "chunk",
   "embed",
+  "qc",
   "vector-store",
   "jobs",
   "export",
@@ -113,7 +114,7 @@ export async function getPipelineData(
 
       const parseResults = results.map((r) => {
         const structured = r.structured as {
-          pages?: unknown[];
+          pages?: { page_number?: number; ocr?: boolean }[];
           tables?: unknown[];
         };
         const md = truncate(r.markdown);
@@ -133,6 +134,9 @@ export async function getPipelineData(
             0,
           ),
           tableCount: structured.tables?.length ?? 0,
+          ocrPageCount: (structured.pages ?? []).filter(
+            (p) => (p as { ocr?: boolean }).ocr,
+          ).length,
           markdown: md.text,
           markdownTruncated: md.truncated,
           structuredPreview: {
@@ -274,6 +278,50 @@ export async function getPipelineData(
           createdAt: r.createdAt,
         })),
         api: pipelineUrl(projectId, "embed", { fileId }),
+      };
+    }
+
+    case "qc": {
+      const reports = await prisma.qcReport.findMany({
+        where: {
+          file: { projectId, ...(fileId ? { id: fileId } : {}) },
+        },
+        orderBy: { createdAt: "desc" },
+        take: fileId ? 5 : limit,
+        select: {
+          id: true,
+          fileId: true,
+          jobId: true,
+          score: true,
+          verdict: true,
+          checks: true,
+          summary: true,
+          createdAt: true,
+          file: { select: { filename: true, status: true } },
+        },
+      });
+
+      return {
+        stage: "qc",
+        version: 1,
+        count: reports.length,
+        reports: reports.map((r) => ({
+          id: r.id,
+          fileId: r.fileId,
+          filename: r.file.filename,
+          fileStatus: r.file.status,
+          jobId: r.jobId,
+          score: r.score,
+          verdict: r.verdict,
+          checks: r.checks,
+          summary: r.summary,
+          createdAt: r.createdAt,
+          links: {
+            full: pipelineUrl(projectId, "qc", { fileId: r.fileId }),
+            file: `/api/projects/${projectId}/files?fileId=${r.fileId}`,
+          },
+        })),
+        api: pipelineUrl(projectId, "qc", { fileId }),
       };
     }
 

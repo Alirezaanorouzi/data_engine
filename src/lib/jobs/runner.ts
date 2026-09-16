@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { JobType, JobStatus } from "@prisma/client";
 import { runParseJob } from "@/lib/jobs/parse";
 import { runChunkEmbedJob } from "@/lib/jobs/chunkEmbed";
+import { runQcJob } from "@/lib/jobs/qc";
 import { createRagExport } from "@/lib/export/rag";
 import { updateJobProgress } from "@/lib/jobs/progress";
 import { pipelineUrl, wrapJobResult } from "@/lib/jobs/results";
@@ -76,6 +77,11 @@ export async function executeJob(jobId: string) {
         result = await runChunkEmbedJob(jobId, job.projectId, job.fileId);
         break;
       }
+      case JobType.QC: {
+        if (!job.fileId) throw new Error("QC job requires fileId");
+        result = await runQcJob(jobId, job.projectId, job.fileId);
+        break;
+      }
       case JobType.EXPORT: {
         const record = await createRagExport(job.projectId, {
           includeEmbeddings: false,
@@ -122,6 +128,20 @@ export async function executeJob(jobId: string) {
       (result as { autoChunk?: boolean }).autoChunk
     ) {
       void createAndStartJob(job.projectId, JobType.CHUNK_EMBED, {
+        fileId: job.fileId,
+      });
+    }
+
+    // After chunk+embed, auto-start deterministic QC gate
+    if (
+      job.type === JobType.CHUNK_EMBED &&
+      job.fileId &&
+      result &&
+      typeof result === "object" &&
+      "autoQc" in result &&
+      (result as { autoQc?: boolean }).autoQc
+    ) {
+      void createAndStartJob(job.projectId, JobType.QC, {
         fileId: job.fileId,
       });
     }

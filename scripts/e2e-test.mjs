@@ -35,7 +35,7 @@ async function waitForJobs(projectId, timeoutMs = 180000) {
   while (Date.now() - start < timeoutMs) {
     const { jobs } = await json(`${BASE}/api/projects/${projectId}/jobs`);
     const relevant = jobs.filter((j) =>
-      ["PARSE", "CHUNK_EMBED"].includes(j.type),
+      ["PARSE", "CHUNK_EMBED", "QC"].includes(j.type),
     );
     const pending = relevant.filter(
       (j) => j.status === "PENDING" || j.status === "RUNNING",
@@ -50,12 +50,15 @@ async function waitForJobs(projectId, timeoutMs = 180000) {
       const chunkDone = relevant.some(
         (j) => j.type === "CHUNK_EMBED" && j.status === "COMPLETED",
       );
-      if (chunkDone && pending.length === 0) return relevant;
+      const qcDone = relevant.some(
+        (j) => j.type === "QC" && j.status === "COMPLETED",
+      );
+      if (chunkDone && qcDone && pending.length === 0) return relevant;
     }
     process.stdout.write(".");
     await sleep(2500);
   }
-  throw new Error("Timed out waiting for parse/chunk jobs");
+  throw new Error("Timed out waiting for parse/chunk/qc jobs");
 }
 
 async function main() {

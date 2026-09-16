@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { fa } from "@/lib/i18n/fa";
+import { fa, fileStatusLabel } from "@/lib/i18n/fa";
 
 type FileOption = { id: string; filename: string; status: string };
 
@@ -18,7 +18,29 @@ type ChunkRow = {
 type ParseResult = {
   id: string;
   markdown: string;
-  structured: { pages?: { page_number: number; blocks: { type: string; text: string }[] }[] };
+  structured: {
+    pages?: { page_number: number; blocks: { type: string; text: string }[] }[];
+  };
+};
+
+type QcCheck = {
+  id: string;
+  pass: boolean;
+  severity: "hard" | "soft";
+  detail: string;
+};
+
+type QcReport = {
+  id: string;
+  score: number;
+  verdict: string;
+  checks: QcCheck[];
+  summary: {
+    coverage?: number;
+    ocrPageCount?: number;
+    chunkCount?: number;
+    parseCharCount?: number;
+  };
 };
 
 export function ReviewWorkspace({ projectId }: { projectId: string }) {
@@ -27,8 +49,10 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
 
   const [files, setFiles] = useState<FileOption[]>([]);
   const [fileId, setFileId] = useState(initialFileId);
+  const [fileStatus, setFileStatus] = useState<string>("");
   const [chunks, setChunks] = useState<ChunkRow[]>([]);
   const [parse, setParse] = useState<ParseResult | null>(null);
+  const [qc, setQc] = useState<QcReport | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -53,6 +77,8 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
     if (!res.ok) throw new Error(data.error || fa.errors.failed);
     setChunks(data.file.chunks || []);
     setParse(data.file.parseResults?.[0] || null);
+    setQc(data.file.qcReports?.[0] || null);
+    setFileStatus(data.file.status || "");
     const next: Record<string, string> = {};
     for (const c of data.file.chunks || []) next[c.id] = c.text;
     setDrafts(next);
@@ -129,6 +155,7 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
       setFileId("");
       setChunks([]);
       setParse(null);
+      setQc(null);
       setDrafts({});
       await loadFiles();
       setMessage(fa.files.deleted);
@@ -152,7 +179,10 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || fa.errors.failed);
       if (action === "rechunk") {
-        setTimeout(() => loadFile(fileId), 2000);
+        setTimeout(() => loadFile(fileId), 3000);
+      } else {
+        await loadFile(fileId);
+        await loadFiles();
       }
       setMessage(fa.review.saved);
     } catch (e) {
@@ -170,6 +200,11 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
     );
   }
 
+  const coveragePct =
+    qc?.summary?.coverage != null
+      ? `${(qc.summary.coverage * 100).toFixed(1)}%`
+      : "—";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
@@ -182,7 +217,7 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
           >
             {files.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.filename}
+                {f.filename} · {fileStatusLabel(f.status)}
               </option>
             ))}
           </select>
@@ -223,6 +258,53 @@ export function ReviewWorkspace({ projectId }: { projectId: string }) {
           {message}
         </p>
       )}
+
+      <div
+        className={`rounded-xl border p-4 ${
+          qc?.verdict === "FAIL"
+            ? "border-red-200 bg-red-50"
+            : qc?.verdict === "NEEDS_REVIEW"
+              ? "border-amber-200 bg-amber-50"
+              : "border-zinc-200 bg-white"
+        }`}
+      >
+        <h2 className="mb-2 text-sm font-semibold">{fa.review.qcReport}</h2>
+        {!qc ? (
+          <p className="text-sm text-zinc-500">{fa.review.qcNoReport}</p>
+        ) : (
+          <div className="space-y-3 text-sm">
+            <div className="flex flex-wrap gap-4 text-zinc-700">
+              <span>
+                {fa.review.qcVerdict}: <strong>{qc.verdict}</strong>
+                {fileStatus ? ` · ${fileStatusLabel(fileStatus)}` : ""}
+              </span>
+              <span>
+                {fa.review.qcScore}:{" "}
+                <strong>{(qc.score * 100).toFixed(0)}%</strong>
+              </span>
+              <span>
+                {fa.review.qcCoverage}: <strong>{coveragePct}</strong>
+              </span>
+              {qc.summary.ocrPageCount != null &&
+                qc.summary.ocrPageCount > 0 && (
+                  <span>OCR: {qc.summary.ocrPageCount} page(s)</span>
+                )}
+            </div>
+            <ul className="space-y-1">
+              {(qc.checks || []).map((c) => (
+                <li
+                  key={c.id}
+                  className={
+                    c.pass ? "text-zinc-600" : "font-medium text-red-700"
+                  }
+                >
+                  {c.pass ? "✓" : "✗"} [{c.severity}] {c.id}: {c.detail}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-zinc-200 bg-white p-4">

@@ -1,11 +1,13 @@
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { AppShell } from "@/components/AppShell";
 import { getProjectStats } from "@/lib/stats";
 import { JobProgress } from "@/components/JobProgress";
 import { PipelineStageButtons } from "@/components/PipelineStageButtons";
 import { DeliveryApiPanel } from "@/components/DeliveryApiPanel";
-import Link from "next/link";
+import { AddFileButton } from "@/components/AddFileButton";
+import { OverviewFiles } from "@/components/OverviewFiles";
 import { fa } from "@/lib/i18n/fa";
 
 export const dynamic = "force-dynamic";
@@ -21,92 +23,97 @@ export default async function ProjectPage({
 
   const stats = await getProjectStats(id);
 
-  const statCards = [
-    [fa.project.stats.files, stats.files],
-    [fa.project.stats.indexed, stats.indexed],
-    [fa.project.stats.chunks, stats.activeChunks],
-    [fa.project.stats.embeddings, stats.embeddings],
-  ] as const;
-
   return (
     <AppShell projectId={project.id} projectName={project.name}>
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div>
+      {/* Header: title + compact add-file on the opposite edge */}
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold tracking-tight">
             {project.name}
           </h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-zinc-500">
             {fa.project.documentSubtitle}
           </p>
         </div>
-        <div className="flex gap-2 text-sm">
-          <Link
-            href={`/projects/${id}/upload`}
-            className="rounded-md bg-zinc-900 px-3 py-1.5 text-white"
-          >
-            {fa.project.upload}
-          </Link>
-          <Link
-            href={`/projects/${id}/files`}
-            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5"
-          >
-            {fa.project.openFiles}
-          </Link>
-          <Link
-            href={`/projects/${id}/search`}
-            className="rounded-md border border-zinc-300 bg-white px-3 py-1.5"
-          >
-            {fa.project.openSearch}
-          </Link>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <AddFileButton projectId={id} />
+          <div className="flex gap-2 text-xs">
+            <Link
+              href={`/projects/${id}/search`}
+              className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-zinc-700 hover:bg-zinc-50"
+            >
+              {fa.project.openSearch}
+            </Link>
+            <Link
+              href={`/projects/${id}/files`}
+              className="rounded-md border border-zinc-300 bg-white px-2.5 py-1 text-zinc-700 hover:bg-zinc-50"
+            >
+              {fa.project.openFiles}
+            </Link>
+          </div>
         </div>
       </div>
 
+      {/* Heart of product: one unified retrieval API */}
       <div className="mb-6">
         <DeliveryApiPanel projectId={id} />
       </div>
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map(([label, value]) => (
+      {/* Independent files → unified store */}
+      <div className="mb-6">
+        <OverviewFiles projectId={id} />
+      </div>
+
+      {/* Compact pulse metrics */}
+      <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {(
+          [
+            [fa.project.stats.files, stats.files],
+            [fa.project.stats.indexed, stats.indexed + stats.needsReview + stats.reviewed],
+            [fa.project.stats.chunks, stats.activeChunks],
+            [fa.project.stats.embeddings, stats.embeddings],
+          ] as const
+        ).map(([label, value]) => (
           <div
             key={label}
-            className="rounded-xl border border-zinc-200 bg-white p-4"
+            className="rounded-lg border border-zinc-200 bg-white px-3 py-2.5"
           >
-            <div className="text-xs uppercase tracking-wide text-zinc-500">
-              {label}
-            </div>
-            <div className="mt-1 text-2xl font-semibold tabular-nums">
+            <div className="text-[11px] text-zinc-500">{label}</div>
+            <div className="mt-0.5 text-xl font-semibold tabular-nums">
               {value}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="mb-6 rounded-xl border border-zinc-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold">{fa.project.pipeline}</h2>
-        <div className="mb-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            {fa.project.parsing}: {stats.parsing}
-          </div>
-          <div>
-            {fa.project.parsed}: {stats.parsed}
-          </div>
-          <div>
-            {fa.project.failed}: {stats.failed}
-          </div>
-          <div>
-            {fa.project.reviewed}: {stats.reviewed}
-          </div>
-          <div>
-            {fa.project.excludedChunks}: {stats.excludedChunks}
-          </div>
-        </div>
-        <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500">
-          {fa.project.inspectPipeline}
-        </h3>
-        <PipelineStageButtons projectId={id} />
+      <div className="mb-4">
+        <JobProgress projectId={id} />
       </div>
 
-      <JobProgress projectId={id} />
+      <details className="rounded-xl border border-zinc-200 bg-white">
+        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-zinc-800 marker:content-none [&::-webkit-details-marker]:hidden">
+          <span className="flex items-center justify-between gap-2">
+            {fa.project.inspectPipeline}
+            <span className="text-xs font-normal text-zinc-400">
+              {fa.project.pipelineDetail}
+            </span>
+          </span>
+        </summary>
+        <div className="border-t border-zinc-100 px-4 py-4">
+          <div className="mb-4 grid gap-2 text-xs text-zinc-600 sm:grid-cols-3">
+            <div>
+              {fa.project.parsing}: {stats.parsing}
+            </div>
+            <div>
+              {fa.project.needsReview}: {stats.needsReview}
+            </div>
+            <div>
+              {fa.project.failed}: {stats.failed}
+            </div>
+          </div>
+          <PipelineStageButtons projectId={id} />
+        </div>
+      </details>
     </AppShell>
   );
 }
